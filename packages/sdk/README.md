@@ -2,6 +2,131 @@
 
 Typed TypeScript client for `LinkoraContract` on Stellar.
 
+## Common Operations
+
+A quick-reference cheatsheet for common SDK tasks. All snippets use TypeScript with standard `linkora-sdk` imports.
+
+### 1. Initialize Client
+
+```ts
+import { LinkoraClient } from "linkora-sdk";
+
+const client = new LinkoraClient({
+  contractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+  rpcUrl: "https://soroban-testnet.stellar.org",
+  networkPassphrase: "Test SDF Network ; September 2015",
+});
+```
+
+### 2. Connect Wallet (Freighter)
+
+```ts
+import { FreighterSigner } from "linkora-sdk";
+
+const signer = new FreighterSigner({ network: "testnet" });
+const address = await signer.getPublicKey();
+```
+
+### 3. Create a Post
+
+```ts
+import { submitTransaction } from "linkora-sdk";
+
+const txXdr = await client.prepareCreatePostTx(address, "Hello Stellar!");
+const hash = await submitTransaction(client, txXdr, signer);
+```
+
+### 4. Follow a User
+
+```ts
+import { submitTransaction } from "linkora-sdk";
+
+const txXdr = await client.prepareFollowTx(address, targetAddress);
+const hash = await submitTransaction(client, txXdr, signer);
+```
+
+### 5. Unfollow a User
+
+```ts
+import { submitTransaction } from "linkora-sdk";
+
+const txXdr = await client.prepareUnfollowTx(address, targetAddress);
+const hash = await submitTransaction(client, txXdr, signer);
+```
+
+### 6. Tip a Creator
+
+```ts
+import { submitTransaction } from "linkora-sdk";
+
+const txXdr = await client.prepareTipTx(address, postId, tokenAddress, 10_000_000n);
+const hash = await submitTransaction(client, txXdr, signer);
+```
+
+### 7. Like a Post
+
+```ts
+import { submitTransaction } from "linkora-sdk";
+
+const txXdr = await client.prepareLikePostTx(address, postId);
+const hash = await submitTransaction(client, txXdr, signer);
+```
+
+### 8. Get Feed / Posts
+
+```ts
+import { Post } from "linkora-sdk";
+
+const totalPosts = await client.getPostCount();
+const post: Post | null = await client.getPost(totalPosts > 0n ? totalPosts - 1n : 0n);
+```
+
+### 9. Get User Profile
+
+```ts
+import { Profile } from "linkora-sdk";
+
+const profile: Profile | null = await client.getProfile(address);
+console.log(profile?.username);
+```
+
+### 10. Deposit to Community Pool
+
+```ts
+import { submitTransaction } from "linkora-sdk";
+
+const txXdr = await client.preparePoolDepositTx(address, poolId, 50_000_000n);
+const hash = await submitTransaction(client, txXdr, signer);
+```
+
+### 11. Register Encrypted DM Key
+
+```ts
+import { submitTransaction } from "linkora-sdk";
+
+const txXdr = await client.prepareDmKeyTx(address, publicKeyBytes);
+const hash = await submitTransaction(client, txXdr, signer);
+```
+
+### 12. Subscribe to Contract Events
+
+```ts
+import { LinkoraEventSubscriber } from "linkora-sdk";
+
+const sub = new LinkoraEventSubscriber({ rpcUrl, contractId });
+sub.on("event", (evt) => console.log("Event received:", evt));
+await sub.start();
+```
+
+### 13. Monitor Connection Health
+
+```ts
+import { ConnectionHealthMonitor } from "linkora-sdk";
+
+const monitor = new ConnectionHealthMonitor(rpcUrl);
+const isHealthy = await monitor.check();
+```
+
 ## Transaction retries: exponential backoff with jitter
 
 `TransactionQueue` submits transactions through the Soroban RPC with a retry
