@@ -9,4 +9,17 @@ export { WalletButton } from "./WalletButton";
 export { MiniAppIcon } from "./MiniAppIcon";
 export { TipModal } from "./TipModal";
 export { AnalyticsCard } from "./AnalyticsCard";
+export { NotificationBadge } from "./NotificationBadge";
+export type {
+  NotificationBadgeProps,
+  NotificationBadgeSize,
+  NotificationBadgeVariant,
+} from "./NotificationBadge";
+export { ReputationBadge, deriveReputationTier } from "./ReputationBadge";
+export type {
+  ReputationBadgeProps,
+  ReputationBadgeSize,
+  ReputationBadgeVariant,
+  ReputationTier,
+} from "./ReputationBadge";
 export type { MiniApp } from "./MiniAppIcon";
