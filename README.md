@@ -1,6 +1,7 @@
 # Linkora
 
 [![CI](https://github.com/ijayabby/Linkora-social/actions/workflows/ci.yml/badge.svg)](https://github.com/ijayabby/Linkora-social/actions/workflows/ci.yml)
+[![Notification Service CI](https://github.com/ijayabby/Linkora-social/actions/workflows/notification-ci.yml/badge.svg)](https://github.com/ijayabby/Linkora-social/actions/workflows/notification-ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Telegram](https://img.shields.io/badge/Telegram-Join-blue?logo=telegram)](https://t.me/+13csp8G4ccRhY2Zk)
 
@@ -21,6 +22,7 @@ Linkora is an open-source SocialFi platform built on Stellar and Soroban. It com
 | `apps/web`                  | 🔧 In progress — Next.js web frontend           |
 | `apps/mobile`               | 🔧 In progress — Expo / React Native mobile app |
 | `services/indexer`          | 🔧 In progress — off-chain event indexer        |
+| `services/notification`     | 🔧 In progress — multi-channel notification svc |
 | `services/dm-relay`         | 🔧 In progress — E2EE direct-message relay      |
 | `services/analytics-oracle` | 🔧 In progress — on-chain analytics oracle      |
 | `examples/mini-apps`        | ✅ Example mini apps available                  |
