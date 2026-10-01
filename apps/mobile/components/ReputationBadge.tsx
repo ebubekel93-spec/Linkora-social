@@ -3,199 +3,96 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "../theme/useTheme";
 
-/**
- * Reputation tier identifiers used by the Linkora protocol.
- *
- * Each tier maps to a distinct colour and label in the badge UI:
- *
- * | Tier         | Meaning                                      |
- * |--------------|----------------------------------------------|
- * | `"bronze"`   | Entry-level on-chain reputation              |
- * | `"silver"`   | Established creator with notable activity    |
- * | `"gold"`     | High-reputation creator, top-tier engagement |
- * | `"verified"` | Platform-verified identity or account        |
- */
-export type ReputationTier = "bronze" | "silver" | "gold" | "verified";
+/** Ordered tiers from lowest to highest reputation. */
+export type ReputationTier = "newcomer" | "member" | "trusted" | "verified" | "legend";
 
-/**
- * Props for the {@link ReputationBadge} component.
- */
 export interface ReputationBadgeProps {
-  /**
-   * The reputation tier determines the badge colour and default label text.
-   *
-   * - `"bronze"` — warm amber background.
-   * - `"silver"` — muted grey background.
-   * - `"gold"` — golden accent background.
-   * - `"verified"` — brand primary (purple) background with a check-mark prefix.
-   */
   tier: ReputationTier;
-
-  /**
-   * Optional override for the displayed badge label. When omitted the
-   * component uses a capitalised version of the `tier` value (e.g. `"Gold"`).
-   * For `"verified"` the default label is `"✓ Verified"`.
-   */
-  label?: string;
-
-  /**
-   * Accessible label announced by screen-readers. Defaults to
-   * `"<tier> reputation badge"` (e.g. `"gold reputation badge"`).
-   *
-   * Override when the badge appears in a context where a more descriptive
-   * announcement adds value (e.g. `"Creator verified by Linkora"`).
-   */
-  accessibilityLabel?: string;
-
-  /**
-   * Optional test identifier used in unit / integration tests to locate the
-   * badge element. Defaults to `"reputation-badge"`.
-   *
-   * @default "reputation-badge"
-   */
   testID?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
+interface TierMeta {
+  label: string;
+  emoji: string;
+  /** Resolved at render time from the theme. */
+  getColor: (theme: ReturnType<typeof useTheme>["theme"]) => string;
+  getBackground: (theme: ReturnType<typeof useTheme>["theme"]) => string;
+}
 
-type TierConfig = {
-  backgroundColor: string;
-  textColor: string;
-  defaultLabel: string;
+const TIER_META: Record<ReputationTier, TierMeta> = {
+  newcomer: {
+    label: "Newcomer",
+    emoji: "🌱",
+    getColor: (t) => t.colors.text.secondary,
+    getBackground: (t) => t.colors.surface.surface2,
+  },
+  member: {
+    label: "Member",
+    emoji: "⭐",
+    getColor: (t) => t.colors.brand.secondary,
+    getBackground: (t) => t.colors.brand.secondaryLight,
+  },
+  trusted: {
+    label: "Trusted",
+    emoji: "🔵",
+    getColor: (t) => t.colors.semantic.info,
+    getBackground: (t) => t.colors.semantic.infoLight,
+  },
+  verified: {
+    label: "Verified",
+    emoji: "✅",
+    getColor: (t) => t.colors.semantic.success,
+    getBackground: (t) => t.colors.semantic.successLight,
+  },
+  legend: {
+    label: "Legend",
+    emoji: "🏆",
+    getColor: (t) => t.colors.brand.accent,
+    getBackground: (t) => t.colors.brand.primaryLight,
+  },
 };
 
 /**
- * Resolves per-tier visual and label configuration from the design-system
- * colour tokens. Called inside the component render so it always picks up the
- * current colour scheme.
+ * Displays a creator's reputation tier as a compact pill badge.
  */
-function resolveTierConfig(
-  tier: ReputationTier,
-  theme: ReturnType<typeof useTheme>["theme"],
-): TierConfig {
-  switch (tier) {
-    case "bronze":
-      return {
-        backgroundColor: "#92400E", // warm amber-brown
-        textColor: "#FEF3C7",
-        defaultLabel: "Bronze",
-      };
-    case "silver":
-      return {
-        backgroundColor: theme.colors.surface.surface2,
-        textColor: theme.colors.text.primary,
-        defaultLabel: "Silver",
-      };
-    case "gold":
-      return {
-        backgroundColor: theme.colors.brand.accent,
-        textColor: "#1C1917",
-        defaultLabel: "Gold",
-      };
-    case "verified":
-      return {
-        backgroundColor: theme.colors.brand.primary,
-        textColor: theme.colors.text.onBrand,
-        defaultLabel: "✓ Verified",
-      };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
-/**
- * `ReputationBadge` renders a compact pill that communicates a user's
- * on-chain reputation tier, following the Linkora design-system colour tokens.
- *
- * **Tiers**
- *
- * | Tier         | Colour                         |
- * |--------------|--------------------------------|
- * | `"bronze"`   | Amber-brown pill               |
- * | `"silver"`   | Neutral surface pill           |
- * | `"gold"`     | Golden accent pill             |
- * | `"verified"` | Brand-purple pill + checkmark  |
- *
- * **Accessibility**
- * - The outer `View` carries an `accessibilityLabel` announced by
- *   VoiceOver / TalkBack (e.g. `"gold reputation badge"`).
- * - `accessibilityRole="text"` on the inner `Text` so screen-readers treat
- *   the badge as readable content.
- * - `importantForAccessibility="yes"` prevents Android's accessibility tree
- *   from skipping the element when it is nested inside a `Pressable`.
- *
- * @example
- * ```tsx
- * // Basic tier badges
- * <ReputationBadge tier="bronze" />
- * <ReputationBadge tier="silver" />
- * <ReputationBadge tier="gold" />
- * <ReputationBadge tier="verified" />
- *
- * // Custom label override
- * <ReputationBadge tier="gold" label="Top Creator" />
- *
- * // Custom accessibility description
- * <ReputationBadge
- *   tier="verified"
- *   accessibilityLabel="Creator verified by Linkora"
- * />
- *
- * // Embedding inside a profile row
- * <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
- *   <Text>{username}</Text>
- *   <ReputationBadge tier={user.reputationTier} />
- * </View>
- * ```
- */
-export function ReputationBadge({
-  tier,
-  label,
-  accessibilityLabel,
-  testID = "reputation-badge",
-}: ReputationBadgeProps) {
+export function ReputationBadge({ tier, testID = "reputation-badge" }: ReputationBadgeProps) {
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  const config = useMemo(() => resolveTierConfig(tier, theme), [tier, theme]);
-
-  const displayLabel = label ?? config.defaultLabel;
-  const a11yLabel = accessibilityLabel ?? `${tier} reputation badge`;
+  const meta = TIER_META[tier];
+  const styles = useMemo(() => createStyles(theme, meta), [theme, meta]);
 
   return (
     <View
-      style={[styles.badge, { backgroundColor: config.backgroundColor }]}
-      accessibilityLabel={a11yLabel}
-      importantForAccessibility="yes"
+      style={styles.badge}
       testID={testID}
+      accessibilityLabel={`Reputation tier: ${meta.label}`}
     >
-      <Text
-        style={[styles.text, { color: config.textColor }]}
-        accessibilityRole="text"
-        accessibilityElementsHidden
-        numberOfLines={1}
-      >
-        {displayLabel}
-      </Text>
+      <Text style={styles.emoji}>{meta.emoji}</Text>
+      <Text style={styles.label}>{meta.label}</Text>
     </View>
   );
 }
 
-function createStyles(theme: ReturnType<typeof useTheme>["theme"]) {
+function createStyles(theme: ReturnType<typeof useTheme>["theme"], meta: TierMeta) {
   return StyleSheet.create({
     badge: {
-      borderRadius: theme.radius.full,
-      paddingHorizontal: 10,
-      paddingVertical: 3,
+      flexDirection: "row",
+      alignItems: "center",
       alignSelf: "flex-start",
+      borderRadius: theme.radius.full,
+      backgroundColor: meta.getBackground(theme),
+      paddingVertical: 2,
+      paddingHorizontal: theme.spacing.sm,
+      gap: 4,
     },
-    text: {
-      fontSize: 11,
-      fontWeight: "700",
-      letterSpacing: 0.3,
+    emoji: {
+      fontSize: 12,
+      lineHeight: 16,
+    },
+    label: {
+      color: meta.getColor(theme),
+      fontSize: 12,
+      fontWeight: "600",
+      lineHeight: 16,
     },
   });
 }
