@@ -1,80 +1,70 @@
-export const NOTIFICATION_TYPES = ["follow", "like", "tip", "mention", "governance", "reward"] as const;
-export type NotificationTemplateType = (typeof NOTIFICATION_TYPES)[number];
-
-export interface NotificationTemplateContext {
-  username?: string;
-  amount?: string | number;
-  postTitle?: string;
-  proposalTitle?: string;
-}
-
-export interface RenderedNotificationTemplate {
+export interface NotificationTemplate {
   subject: string;
   html: string;
-  text: string;
+  text?: string;
 }
 
-type TemplateDefinition = {
-  subject: (context: NotificationTemplateContext) => string;
-  body: (context: NotificationTemplateContext) => string;
-};
-
-const value = (input: string | number | undefined, fallback: string): string =>
-  input === undefined || String(input).trim() === ""
-    ? fallback
-    : String(input).replace(/[\r\n]/g, " ");
-
-const definitions: Record<NotificationTemplateType, TemplateDefinition> = {
-  follow: {
-    subject: ({ username }) => `${value(username, "Someone")} followed you`,
-    body: ({ username }) => `${value(username, "Someone")} is now following you.`,
-  },
-  like: {
-    subject: ({ username }) => `${value(username, "Someone")} liked your post`,
-    body: ({ username, postTitle }) => `${value(username, "Someone")} liked “${value(postTitle, "your post")}”.`,
-  },
-  tip: {
-    subject: ({ username }) => `${value(username, "Someone")} sent you a tip`,
-    body: ({ username, amount, postTitle }) =>
-      `${value(username, "Someone")} tipped ${value(amount, "an amount")} on “${value(postTitle, "your post") }”.`,
-  },
-  mention: {
-    subject: ({ username }) => `${value(username, "Someone")} mentioned you`,
-    body: ({ username, postTitle }) => `${value(username, "Someone")} mentioned you in “${value(postTitle, "a post") }”.`,
-  },
-  governance: {
-    subject: ({ proposalTitle }) => `Governance update: ${value(proposalTitle, "a proposal")}`,
-    body: ({ proposalTitle }) => `There is a new update for “${value(proposalTitle, "a proposal") }”.`,
-  },
-  reward: {
-    subject: () => "Creator reward received",
-    body: ({ amount }) => `You received a creator reward of ${value(amount, "an amount")}.`,
-  },
-};
-
-function escapeHtml(input: string): string {
-  const replacements: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  };
-  return input.replace(/[&<>"']/g, (character) => replacements[character]!);
+export interface TemplateContext {
+  [key: string]: unknown;
 }
 
-/** Render plain-text and HTML variants from the same escaped template data. */
-export function renderNotificationTemplate(
-  type: NotificationTemplateType,
-  context: NotificationTemplateContext = {},
-): RenderedNotificationTemplate {
-  const definition = definitions[type];
-  if (!definition) throw new TypeError(`Unsupported notification template: ${String(type)}`);
-  const subject = definition.subject(context);
-  const text = definition.body(context);
+const escapeHtml = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const interpolate = (template: string, context: TemplateContext): string =>
+  template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_match, key: string) => {
+    const value = key.split('.').reduce<unknown>((acc, part) => {
+      if (acc && typeof acc === 'object') {
+        return (acc as Record<string, unknown>)[part];
+      }
+      return undefined;
+    }, context);
+    return escapeHtml(value);
+  });
+
+const wrapHtml = (body: string, unsubscribeUrl?: string): string => {
+  const footer = unsubscribeUrl
+    ? `<p style="margin-top:24px;font-size:12px;color:#888">Don't want these emails? <a href="${escapeHtml(
+        unsubscribeUrl,
+      )}">Unsubscribe</a>.</p>`
+    : '';
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;line-height:1.5">${body}${footer}</body></html>`;
+};
+
+const templates: Record<string, NotificationTemplate> = {
+  welcome: {
+    subject: 'Welcome to {{appName}}',
+    html: '<h1>Welcome, {{name}}!</h1><p>Thanks for joining {{appName}}.</p>',
+    text: 'Welcome, {{name}}! Thanks for joining {{appName}}.',
+  },
+  'password-reset': {
+    subject: 'Reset your {{appName}} password',
+    html: '<h1>Password reset</h1><p>Hi {{name}}, click the link below to reset your password.</p><p><a href="{{resetUrl}}">Reset password</a></p>',
+    text: 'Hi {{name}}, reset your password: {{resetUrl}}',
+  },
+  notification: {
+    subject: '{{title}}',
+    html: '<h1>{{title}}</h1><p>{{message}}</p>',
+    text: '{{title}}\n\n{{message}}',
+  },
+};
+
+export const renderTemplate = (
+  name: string,
+  context: TemplateContext = {},
+  unsubscribeUrl?: string,
+): NotificationTemplate => {
+  const template = templates[name] ?? templates.notification;
   return {
-    subject,
-    text,
-    html: `<p>${escapeHtml(text)}</p>`,
+    subject: interpolate(template.subject, context),
+    html: wrapHtml(interpolate(template.html, context), unsubscribeUrl),
+    text: template.text ? interpolate(template.text, context) : undefined,
   };
-}
+};
+
+export const listTemplates = (): string[] => Object.keys(templates);
